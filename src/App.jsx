@@ -1,137 +1,104 @@
 import { Component } from 'react';
-import css from './App.module.css';
-import { Heading } from 'components/Heading/Heading';
-import { Book } from 'components/book/Book';
-import booksJson from '../src/books.json';
-import BookForm from 'components/BookForm/BookForm';
-import Modal from 'components/Modal/Modal';
+import { StyledAppContainer } from 'App.styled';
+import { fetchPosts, findPostById } from 'services/api';
+// import css from './App.module.css';
+// import { Heading } from 'components/Heading/Heading';
+// import { Book } from 'components/book/Book';
+// import booksJson from '../src/books.json';
+// import BookForm from 'components/BookForm/BookForm';
+// import Modal from 'components/Modal/Modal';
 
-const books = booksJson.books;
-console.log('jjjj', books);
+// const books = booksJson.books;
 
 export class App extends Component {
   state = {
-    appBooks: books,
-    counterValue: 0,
-    deliteCounter: 0,
-    modal: {
-      isOpen: false,
-      data: null,
-    },
-    // contacts: []
+    posts: null,
+    isLoading: false,
+    error: null,
+    searchedPostId: null,
+  };
+  fetchAllPosts = async () => {
+    try {
+      this.setState({ isLoading: true });
+      const posts = await fetchPosts();
+      // console.log(posts);
+      this.setState({ posts: posts });
+    } catch (error) {
+      this.setState({ error: error.message });
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
+  fetchPostById = async () => {
+    try {
+      this.setState({ isLoading: true });
+      const post = await findPostById(this.state.searchedPostId);
+      this.setState({
+        posts: [post],
+      });
+    } catch (error) {
+      this.setState({ error: error.message });
+    } finally {
+      this.setState({ isLoading: false });
+    }
   };
   componentDidMount() {
-    const stringifyBooks = localStorage.getItem('books');
-    let parsedBooks = JSON.parse(stringifyBooks) ?? [];
-    if (parsedBooks.length === 0) {
-      let string = JSON.stringify(books);
-      localStorage.setItem('books', string);
-      parsedBooks = books;
-    }
-    this.setState({
-      appBooks: parsedBooks,
-    });
+    this.fetchAllPosts();
   }
-
-  componentDidUpdate(prevProps, prevState) {
-    console.log('componentDidUpdate: App - update');
-    if (this.state.appBooks.length !== prevState.appBooks.length) {
-      console.log('Changed appBooks');
-      const stringifyBooks = JSON.stringify(this.state.appBooks);
-      localStorage.setItem('books', stringifyBooks);
+  componentDidUpdate(_, prevState) {
+    if (prevState.searchedPostId !== this.state.searchedPostId) {
+      this.fetchPostById();
     }
   }
 
-  handleIncrement = () => {
-    // this.setState({ counterValue: this.state.counterValue + 1 });
-    this.setState(prevState => {
-      return {
-        counterValue: prevState.counterValue + 1,
-      };
-    });
-  };
-  handleDelete = bookTitle => {
-    this.setState(prevState => {
-      return {
-        appBooks: prevState.appBooks.filter(book => book.title !== bookTitle),
-        deliteCounter: prevState.deliteCounter + 1,
-        // contacts: [...prevState.contacts, newContact]
-      };
-    });
-  };
-  handleAddBook = bookData => {
-    console.log(bookData);
-    const hasBookDuplicate = this.state.appBooks.some(
-      book => book.title === bookData.title
-    );
-    //  if (this.state.appBooks.some(book => book.title === bookData.title))
-    if (hasBookDuplicate) {
-      alert(`Oops, book with title ${bookData.title} already exists`);
-      return;
-    }
-
-    this.setState(prevState => {
-      return {
-        appBooks: [bookData, ...prevState.appBooks],
-      };
-    });
-  };
-  onOpenModal = modalData => {
+  handleSubmitSearch = event => {
+    event.preventDefault();
+    const searchedPostId = event.currentTarget.elements.searchPostId.value;
+    console.log(searchedPostId);
     this.setState({
-      modal: {
-        isOpen: true,
-        data: modalData,
-      },
+      searchedPostId: searchedPostId,
     });
-  };
-  onCloseModal = () => {
-    this.setState({
-      modal: {
-        isOpen: false,
-        data: null,
-      },
-    });
+    event.currentTarget.reset();
   };
 
   render() {
+    const showPosts =
+      Array.isArray(this.state.posts) && this.state.posts.length;
     return (
-      <div>
-        <Heading className={css.headingApp1}>React homework template</Heading>
-        <Heading className={css.headingApp1}>
-          State value: {this.state.counterValue}
-        </Heading>
-        <Heading className={css.headingApp1}>
-          Delete books: {this.state.deliteCounter}
-        </Heading>
-
-        <BookForm handleAddBook={this.handleAddBook} />
-
-        <ul className={css.booksList}>
-          {this.state.appBooks.map(book => {
-            return (
-              <Book
-                key={`${book.title}_${book.author}`}
-                title={book.title}
-                author={book.author}
-                year={book.year}
-                genre={book.genre}
-                favourite={book.favourite}
-                cover={book.cover}
-                handleIncrement={this.handleIncrement}
-                handleDelete={this.handleDelete}
-                onOpenModal={this.onOpenModal}
-              />
-            );
-          })}
-        </ul>
-        {/* {this.state.modal.isOpen && <Modal />} */}
-        {this.state.modal.isOpen && (
-          <Modal
-            onCloseModal={this.onCloseModal}
-            data={this.state.modal.data}
-          />
+      <StyledAppContainer>
+        <h1 className="title" tabIndex={0}>
+          App title
+        </h1>
+        <form onSubmit={this.handleSubmitSearch}>
+          <label>
+            <p>Enter post ID to find in database</p>
+            <input name="searchPostId" type="text" placeholder="Enter ID" />
+            <button type="submit">Search</button>
+            <button onClick={this.fetchAllPosts} type="reset">
+              Reset
+            </button>
+          </label>
+        </form>
+        {this.state.isLoading && (
+          <div>
+            <p>Loading...</p>
+          </div>
         )}
-      </div>
+        {this.state.error && <p className="error">{this.state.error}</p>}
+        <ul className="postList">
+          {showPosts &&
+            this.state.posts.map(post => {
+              return (
+                <li key={post.id} className="postListItem">
+                  <span>Id: {post.id}</span>
+                  <h3>Title: {post.title}</h3>
+                  <h4>User Id: {post.userId}</h4>
+                  <p>Body: {post.body}</p>
+                </li>
+              );
+            })}
+        </ul>
+      </StyledAppContainer>
     );
   }
 }
