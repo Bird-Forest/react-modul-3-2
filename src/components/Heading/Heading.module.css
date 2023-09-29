@@ -1,0 +1,18 @@
+.heading-1v1 {
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
+  color: #010101;
+  background-color: tomato;
+}
+.headingApp1 {
+  background-color: aqua;
+}
+.headingApp2 {
+  background-color: blanchedalmond;
+}
+.headingApp3 {
+  background-color: cadetblue;
+}
